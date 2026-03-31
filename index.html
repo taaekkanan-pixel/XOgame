@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>XO Draw — Tic-Tac-Toe</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Caveat:wght@600;700&display=swap');
+
+  :root {
+    --green: #4CAF7D;
+    --green-light: #E8F5EE;
+    --green-mid: #A8D5B9;
+    --green-dark: #2E7D52;
+    --x-color: #E05A5A;
+    --x-light: #FFF0F0;
+    --o-color: #4A90D9;
+    --o-light: #EEF4FF;
+    --bg: #FAFFF9;
+    --cell-bg: #FFFFFF;
+    --border: #C8E6D3;
+    --text: #2D3A32;
+    --text-light: #7A9A85;
+    --shadow: rgba(76, 175, 125, 0.15);
+    --cell-size: min(26vw, 200px);
+    --gap: min(2vw, 14px);
+    --radius: 20px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    font-family: 'Nunito', sans-serif;
+    color: var(--text);
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(10px, 2.5vh, 22px);
+    padding: 16px;
+    min-height: 100dvh;
+  }
+
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0.35;
+    z-index: 0;
+  }
+  .blob1 { width: 340px; height: 340px; background: radial-gradient(circle, #b8f0d0, transparent 70%); top: -80px; left: -80px; }
+  .blob2 { width: 280px; height: 280px; background: radial-gradient(circle, #ffd6d6, transparent 70%); bottom: -60px; right: -60px; }
+  .blob3 { width: 200px; height: 200px; background: radial-gradient(circle, #d6e8ff, transparent 70%); bottom: 20%; left: -40px; }
+
+  .game-wrapper {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(10px, 2.5vh, 22px);
+    width: 100%;
+  }
+
+  .header {
+    text-align: center;
+  }
+
+  .title {
+    font-family: 'Caveat', cursive;
+    font-size: clamp(32px, 7vw, 58px);
+    font-weight: 700;
+    color: var(--green-dark);
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+
+  .title span { color: var(--x-color); }
+  .title span.o { color: var(--o-color); }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 50px;
+    padding: 10px 22px;
+    min-width: min(80vw, 340px);
+    box-shadow: 0 4px 16px var(--shadow);
+    transition: all 0.3s ease;
+  }
+
+  .status-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .status-icon.x { background: var(--x-light); color: var(--x-color); }
+  .status-icon.o { background: var(--o-light); color: var(--o-color); }
+  .status-icon.draw { background: #f5f5f5; color: #999; }
+
+  .status-text {
+    font-size: clamp(14px, 3.5vw, 18px);
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .pulse { animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.15);} }
+
+  .top-action-row {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .btn {
+    font-family: 'Nunito', sans-serif;
+    font-size: clamp(14px, 3.5vw, 17px);
+    font-weight: 800;
+    padding: 12px 28px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    letter-spacing: 0.2px;
+  }
+
+  .btn:active { transform: scale(0.95); }
+
+  .btn-undo {
+    background: white;
+    color: var(--green-dark);
+    border: 2px solid var(--border);
+    box-shadow: 0 4px 16px var(--shadow);
+  }
+
+  .btn-undo:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-undo:not(:disabled):hover {
+    background: var(--green-light);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, var(--cell-size));
+    grid-template-rows: repeat(3, var(--cell-size));
+    gap: var(--gap);
+    padding: var(--gap);
+    background: var(--green-light);
+    border-radius: 28px;
+    border: 2.5px solid var(--border);
+    box-shadow: 0 8px 32px var(--shadow), inset 0 2px 8px rgba(255,255,255,0.8);
+    position: relative;
+  }
+
+  .cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    background: var(--cell-bg);
+    border-radius: var(--radius);
+    border: 2px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    cursor: crosshair;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .cell:active:not(.locked) { transform: scale(0.97); }
+  .cell.active-drawing {
+    border-color: var(--green);
+    background: var(--green-light);
+    box-shadow: 0 0 0 3px rgba(76,175,125,0.25), 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .cell.locked { cursor: default; }
+  .cell.locked.has-x { background: var(--x-light); border-color: #f5b8b8; }
+  .cell.locked.has-o { background: var(--o-light); border-color: #b8d0f0; }
+
+  .cell.winner-cell {
+    animation: winner-pulse 0.6s ease-in-out 3;
+    border-width: 3px;
+  }
+
+  .cell.winner-cell.has-x { border-color: var(--x-color); background: #ffe0e0; }
+  .cell.winner-cell.has-o { border-color: var(--o-color); background: #ddeeff; }
+
+  @keyframes winner-pulse {
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.06);}
+  }
+
+  .cell canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+  }
+
+  .cell .symbol-display {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Caveat', cursive;
+    font-size: calc(var(--cell-size) * 0.6);
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+    transform: scale(0.7);
+    user-select: none;
+  }
+
+  .cell .symbol-display.show { opacity: 1; transform: scale(1); }
+  .cell .symbol-display.x { color: var(--x-color); }
+  .cell .symbol-display.o { color: var(--o-color); }
+
+  .clear-btn-overlay {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(255,255,255,0.9);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 3px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-light);
+    cursor: pointer;
+    z-index: 10;
+    display: none;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  .cell.active-drawing .clear-btn-overlay { display: block; }
+
+  .score-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .score-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 8px 20px;
+    min-width: 70px;
+    box-shadow: 0 2px 10px var(--shadow);
+  }
+
+  .score-card .sc-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-light);
+  }
+
+  .score-card .sc-val {
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1.2;
+  }
+
+  .score-card.x .sc-val { color: var(--x-color); }
+  .score-card.o .sc-val { color: var(--o-color); }
+  .score-card.draw-card .sc-val { color: var(--text-light); }
+
+  .score-divider {
+    font-size: 20px;
+    color: var(--border);
+    font-weight: 700;
+  }
+
+  .confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 99;
+  }
+
+  .starter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .starter-label {
+    font-size: clamp(12px, 3vw, 14px);
+    font-weight: 700;
+    color: var(--text-light);
+    white-space: nowrap;
+  }
+
+  .starter-toggle {
+    display: flex;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 50px;
+    padding: 3px;
+    gap: 3px;
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+
+  .starter-btn {
+    font-family: 'Nunito', sans-serif;
+    font-size: clamp(13px, 3vw, 15px);
+    font-weight: 800;
+    padding: 7px 22px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    background: transparent;
+    color: var(--text-light);
+  }
+
+  .starter-btn:active { transform: scale(0.95); }
+  .starter-btn.active-x {
+    background: var(--x-color);
+    color: white;
+    box-shadow: 0 2px 8px rgba(224,90,90,0.35);
+  }
+
+  .starter-btn.active-o {
+    background: var(--o-color);
+    color: white;
+    box-shadow: 0 2px 8px rgba(74,144,217,0.35);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn-new {
+    background: var(--green);
+    color: white;
+    box-shadow: 0 4px 16px rgba(76,175,125,0.4);
+  }
+
+  .btn-new:hover {
+    background: var(--green-dark);
+    box-shadow: 0 6px 20px rgba(76,175,125,0.5);
+  }
+
+  .hint {
+    font-size: clamp(11px, 2.5vw, 13px);
+    color: var(--text-light);
+    text-align: center;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+<canvas class="confetti-canvas" id="confettiCanvas"></canvas>
+
+<div class="game-wrapper">
+
+  <div class="header">
+    <div class="title"><span>X</span> O </span></div>
+  </div>
+
+  <div class="status-bar" id="statusBar">
+    <div class="status-icon x pulse" id="statusIcon">✕</div>
+    <div class="status-text" id="statusText">Player X's turn — Draw!</div>
+  </div>
+
+  <div class="top-action-row">
+    <button class="btn btn-undo" id="undoBtn" onclick="undoLastMove()" disabled>↩ Undo Last Move</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="score-row">
+    <div class="score-card x">
+      <span class="sc-label">Player X</span>
+      <span class="sc-val" id="scoreX">0</span>
+    </div>
+    <div class="score-divider">·</div>
+    <div class="score-card draw-card">
+      <span class="sc-label">Draws</span>
+      <span class="sc-val" id="scoreD">0</span>
+    </div>
+    <div class="score-divider">·</div>
+    <div class="score-card o">
+      <span class="sc-label">Player O</span>
+      <span class="sc-val" id="scoreO">0</span>
+    </div>
+  </div>
+
+  <div class="starter-row">
+    <span class="starter-label">Start first:</span>
+    <div class="starter-toggle">
+      <button class="starter-btn active-x" id="starterX" onclick="setStartingPlayer('X')">✕</button>
+      <button class="starter-btn" id="starterO" onclick="setStartingPlayer('O')">O</button>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-new" id="newGameBtn">🔄 New Game</button>
+  </div>
+
+  <div class="hint" id="hintText">Draw an X or O in any cell · Use Apple Pencil or finger</div>
+
+</div>
+
+<script>
+const state = {
+  board: Array(9).fill(null),
+  currentPlayer: 'X',
+  startingPlayer: 'X',
+  gameOver: false,
+  winner: null,
+  winLine: null,
+  scores: { X: 0, O: 0, D: 0 },
+  drawing: { cellIndex: -1, active: false },
+  strokes: [],
+  currentStroke: [],
+  moveHistory: [],
+};
+
+const WIN_LINES = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
+const grid = document.getElementById('grid');
+const cells = [];
+const cellCanvases = [];
+const cellCtxs = [];
+
+for (let i = 0; i < 9; i++) {
+  const cell = document.createElement('div');
+  cell.className = 'cell';
+  cell.dataset.index = i;
+
+  const canvas = document.createElement('canvas');
+
+  const symbol = document.createElement('div');
+  symbol.className = 'symbol-display';
+
+  const clearBtn = document.createElement('div');
+  clearBtn.className = 'clear-btn-overlay';
+  clearBtn.textContent = '✕ Clear';
+  clearBtn.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    clearCurrentDrawing();
+  });
+
+  cell.appendChild(canvas);
+  cell.appendChild(symbol);
+  cell.appendChild(clearBtn);
+  grid.appendChild(cell);
+  cells.push(cell);
+  cellCanvases.push(canvas);
+}
+
+function resizeCellCanvases() {
+  cells.forEach((cell, i) => {
+    const r = cell.getBoundingClientRect();
+    const cv = cellCanvases[i];
+    cv.width = r.width;
+    cv.height = r.height;
+    cellCtxs[i] = cv.getContext('2d');
+  });
+}
+
+window.addEventListener('resize', () => {
+  resizeCellCanvases();
+  redrawAllCells();
+});
+resizeCellCanvases();
+
+let activePointers = {};
+
+grid.addEventListener('pointerdown', onPointerDown, { passive: false });
+grid.addEventListener('pointermove', onPointerMove, { passive: false });
+grid.addEventListener('pointerup', onPointerUp, { passive: false });
+grid.addEventListener('pointercancel', onPointerUp, { passive: false });
+
+document.addEventListener('touchmove', e => {
+  if (state.drawing.active) e.preventDefault();
+}, { passive: false });
+
+function getCellFromEvent(e) {
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if (!el) return null;
+  return el.closest('.cell');
+}
+
+function getLocalPoint(e, cell) {
+  const r = cell.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+function onPointerDown(e) {
+  e.preventDefault();
+  const cell = getCellFromEvent(e);
+  if (!cell) return;
+
+  const idx = parseInt(cell.dataset.index, 10);
+  if (state.board[idx] !== null || state.gameOver) return;
+
+  if (state.drawing.cellIndex !== idx) {
+    if (state.drawing.cellIndex >= 0) cancelDrawing();
+    state.drawing.cellIndex = idx;
+    state.drawing.active = true;
+    state.strokes = [];
+    state.currentStroke = [];
+    cells[idx].classList.add('active-drawing');
+  }
+
+  const pt = getLocalPoint(e, cell);
+  state.currentStroke = [pt];
+  activePointers[e.pointerId] = { cellIndex: idx };
+  cell.setPointerCapture(e.pointerId);
+}
+
+function onPointerMove(e) {
+  e.preventDefault();
+  if (!activePointers[e.pointerId]) return;
+
+  const { cellIndex } = activePointers[e.pointerId];
+  if (cellIndex < 0) return;
+
+  const cell = cells[cellIndex];
+  const pt = getLocalPoint(e, cell);
+  state.currentStroke.push(pt);
+  drawStrokeSegment(cellIndex, pt);
+}
+
+function onPointerUp(e) {
+  if (!activePointers[e.pointerId]) return;
+
+  const { cellIndex } = activePointers[e.pointerId];
+  delete activePointers[e.pointerId];
+
+  if (cellIndex < 0 || state.currentStroke.length < 2) {
+    state.currentStroke = [];
+    return;
+  }
+
+  state.strokes.push([...state.currentStroke]);
+  state.currentStroke = [];
+
+  clearTimeout(state._classifyTimer);
+  state._classifyTimer = setTimeout(() => tryClassify(cellIndex), 500);
+}
+
+function drawStrokeSegment(cellIndex, pt) {
+  const ctx = cellCtxs[cellIndex];
+  const strokes = [...state.strokes, state.currentStroke];
+  const lastStroke = strokes[strokes.length - 1];
+  if (!lastStroke || lastStroke.length < 2) return;
+
+  ctx.strokeStyle = '#4A4A4A';
+  ctx.lineWidth = 3.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  const prev = lastStroke[lastStroke.length - 2];
+  ctx.moveTo(prev.x, prev.y);
+  ctx.lineTo(pt.x, pt.y);
+  ctx.stroke();
+}
+
+function redrawCell(idx) {
+  const ctx = cellCtxs[idx];
+  const cv = cellCanvases[idx];
+  ctx.clearRect(0, 0, cv.width, cv.height);
+
+  if (state.board[idx]) return;
+
+  if (state.drawing.cellIndex === idx) {
+    const allStrokes = [...state.strokes];
+    if (state.currentStroke.length) allStrokes.push(state.currentStroke);
+
+    allStrokes.forEach(stroke => {
+      if (stroke.length < 2) return;
+      ctx.strokeStyle = '#4A4A4A';
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      stroke.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+    });
+  }
+}
+
+function redrawAllCells() {
+  for (let i = 0; i < 9; i++) redrawCell(i);
+}
+
+function classifyDrawing(strokes) {
+  const pts = strokes.flat();
+  if (pts.length < 4) return null;
+
+  const xs = pts.map(p => p.x);
+  const ys = pts.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const w = maxX - minX, h = maxY - minY;
+  if (w < 10 || h < 10) return null;
+
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  const avgR = pts.reduce((s, p) => s + Math.hypot(p.x - cx, p.y - cy), 0) / pts.length;
+  const stdR = Math.sqrt(
+    pts.reduce((s, p) => s + Math.pow(Math.hypot(p.x - cx, p.y - cy) - avgR, 2), 0) / pts.length
+  );
+  const circularityScore = 1 - (stdR / (avgR + 1));
+
+  const angles = pts.map(p => Math.atan2(p.y - cy, p.x - cx));
+  const sortedAngles = [...angles].sort((a, b) => a - b);
+  let maxGap = 0;
+  for (let i = 1; i < sortedAngles.length; i++) {
+    maxGap = Math.max(maxGap, sortedAngles[i] - sortedAngles[i - 1]);
+  }
+  const wrapGap = (2 * Math.PI) - sortedAngles[sortedAngles.length - 1] + sortedAngles[0];
+  maxGap = Math.max(maxGap, wrapGap);
+  const angularCoverage = 1 - maxGap / (2 * Math.PI);
+
+  const dirChanges = countDirectionChanges(pts);
+  const diagonalScore = getDiagonalScore(pts, w, h);
+  const strokeCount = strokes.length;
+
+  const aspectRatio = w === 0 ? 1 : h / w;
+  const aspectScore = 1 - Math.abs(aspectRatio - 1);
+
+  const oScore = circularityScore * 0.5 + angularCoverage * 0.3 + aspectScore * 0.2;
+  const xScore = (strokeCount === 2 ? 0.5 : 0) + diagonalScore * 0.3 + (dirChanges > 2 ? 0.2 : 0);
+
+  if (oScore > 0.55 && oScore > xScore + 0.1) return 'O';
+  if (xScore > 0.4 && xScore >= oScore) return 'X';
+  if (oScore > 0.5) return 'O';
+  if (strokeCount === 2) return 'X';
+
+  return oScore > 0.45 ? 'O' : 'X';
+}
+
+function countDirectionChanges(pts) {
+  if (pts.length < 3) return 0;
+  let changes = 0;
+  let prevDx = pts[1].x - pts[0].x;
+  let prevDy = pts[1].y - pts[0].y;
+
+  for (let i = 2; i < pts.length; i++) {
+    const dx = pts[i].x - pts[i - 1].x;
+    const dy = pts[i].y - pts[i - 1].y;
+    if (dx * prevDx + dy * prevDy < 0) changes++;
+    prevDx = dx;
+    prevDy = dy;
+  }
+  return changes;
+}
+
+function getDiagonalScore(pts, w, h) {
+  if (w < 1 || h < 1) return 0;
+  const xs = pts.map(p => p.x);
+  const ys = pts.map(p => p.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  let diagScore = 0;
+
+  pts.forEach(p => {
+    const nx = (p.x - minX) / w;
+    const ny = (p.y - minY) / h;
+    const d1 = Math.abs(nx - ny);
+    const d2 = Math.abs(nx - (1 - ny));
+    if (d1 < 0.25 || d2 < 0.25) diagScore++;
+  });
+
+  return diagScore / pts.length;
+}
+
+function tryClassify(cellIndex) {
+  if (state.board[cellIndex] !== null || state.drawing.cellIndex !== cellIndex) return;
+  if (state.strokes.length === 0) return;
+
+  const result = classifyDrawing(state.strokes);
+  if (!result) return;
+
+  placeSymbol(cellIndex, state.currentPlayer);
+}
+
+function placeSymbol(cellIndex, symbol) {
+  cancelDrawing(false);
+
+  state.board[cellIndex] = symbol;
+  state.moveHistory.push({ index: cellIndex, symbol });
+
+  cells[cellIndex].classList.remove('active-drawing');
+  cells[cellIndex].classList.add('locked', `has-${symbol.toLowerCase()}`);
+
+  const symEl = cells[cellIndex].querySelector('.symbol-display');
+  symEl.textContent = symbol;
+  symEl.className = `symbol-display ${symbol.toLowerCase()} show`;
+
+  const ctx = cellCtxs[cellIndex];
+  ctx.clearRect(0, 0, cellCanvases[cellIndex].width, cellCanvases[cellIndex].height);
+
+  updateUndoButton();
+  playSound(symbol);
+  checkGameState();
+}
+
+function checkGameState() {
+  for (const line of WIN_LINES) {
+    const [a, b, c] = line;
+    if (state.board[a] && state.board[a] === state.board[b] && state.board[a] === state.board[c]) {
+      const winner = state.board[a];
+      state.gameOver = true;
+      state.winner = winner;
+      state.winLine = line;
+      state.scores[winner]++;
+      updateScoreDisplay();
+      highlightWinLine(line);
+      setStatus(`Player ${winner} wins! 🎉`, winner);
+      launchConfetti();
+      return;
+    }
+  }
+
+  if (state.board.every(v => v !== null)) {
+    state.gameOver = true;
+    state.winner = 'draw';
+    state.scores.D++;
+    updateScoreDisplay();
+    setStatus("It's a draw! 🤝", 'draw');
+    return;
+  }
+
+  state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
+  setStatus(`Player ${state.currentPlayer}'s turn — Draw!`, state.currentPlayer);
+}
+
+function highlightWinLine(line) {
+  line.forEach(i => cells[i].classList.add('winner-cell'));
+}
+
+function clearWinnerHighlights() {
+  cells.forEach(cell => cell.classList.remove('winner-cell'));
+}
+
+function cancelDrawing(clearStrokes = true) {
+  const idx = state.drawing.cellIndex;
+
+  if (idx >= 0) {
+    cells[idx].classList.remove('active-drawing');
+    if (clearStrokes) {
+      state.strokes = [];
+      state.currentStroke = [];
+      const ctx = cellCtxs[idx];
+      ctx.clearRect(0, 0, cellCanvases[idx].width, cellCanvases[idx].height);
+    }
+  }
+
+  state.drawing.cellIndex = -1;
+  state.drawing.active = false;
+  clearTimeout(state._classifyTimer);
+}
+
+function clearCurrentDrawing() {
+  const idx = state.drawing.cellIndex;
+  if (idx < 0) return;
+
+  state.strokes = [];
+  state.currentStroke = [];
+  const ctx = cellCtxs[idx];
+  ctx.clearRect(0, 0, cellCanvases[idx].width, cellCanvases[idx].height);
+  clearTimeout(state._classifyTimer);
+}
+
+function setStartingPlayer(player) {
+  state.startingPlayer = player;
+
+  document.getElementById('starterX').className = 'starter-btn' + (player === 'X' ? ' active-x' : '');
+  document.getElementById('starterO').className = 'starter-btn' + (player === 'O' ? ' active-o' : '');
+
+  if (!state.gameOver && state.board.every(v => v === null)) {
+    state.currentPlayer = player;
+    setStatus(`Player ${player}'s turn — Draw!`, player);
+  }
+}
+
+function undoLastMove() {
+  cancelDrawing();
+  stopConfetti();
+
+  if (state.moveHistory.length === 0) return;
+
+  const lastMove = state.moveHistory.pop();
+  const { index, symbol } = lastMove;
+
+  state.board[index] = null;
+  state.currentPlayer = symbol;
+  state.gameOver = false;
+  state.winner = null;
+  state.winLine = null;
+
+  clearWinnerHighlights();
+
+  const cell = cells[index];
+  cell.className = 'cell';
+
+  const symEl = cell.querySelector('.symbol-display');
+  symEl.className = 'symbol-display';
+  symEl.textContent = '';
+
+  const ctx = cellCtxs[index];
+  ctx.clearRect(0, 0, cellCanvases[index].width, cellCanvases[index].height);
+
+  setStatus(`Player ${state.currentPlayer}'s turn — Draw!`, state.currentPlayer);
+  updateUndoButton();
+}
+
+function newGame() {
+  stopConfetti();
+
+  state.board = Array(9).fill(null);
+  state.currentPlayer = state.startingPlayer;
+  state.gameOver = false;
+  state.winner = null;
+  state.winLine = null;
+  state.moveHistory = [];
+  cancelDrawing();
+
+  cells.forEach((cell, i) => {
+    cell.className = 'cell';
+    const symEl = cell.querySelector('.symbol-display');
+    symEl.className = 'symbol-display';
+    symEl.textContent = '';
+    const ctx = cellCtxs[i];
+    ctx.clearRect(0, 0, cellCanvases[i].width, cellCanvases[i].height);
+  });
+
+  setStatus(`Player ${state.startingPlayer}'s turn — Draw!`, state.startingPlayer);
+  updateUndoButton();
+}
+
+function setStatus(text, player) {
+  const icon = document.getElementById('statusIcon');
+  const statusText = document.getElementById('statusText');
+  const hint = document.getElementById('hintText');
+
+  statusText.textContent = text;
+  icon.className = 'status-icon ' + (player === 'X' ? 'x' : player === 'O' ? 'o' : 'draw');
+  icon.textContent = player === 'X' ? '✕' : player === 'O' ? '○' : '—';
+
+  if (!state.gameOver) icon.classList.add('pulse');
+  else icon.classList.remove('pulse');
+
+  if (state.gameOver) {
+    hint.textContent = 'Tap "New Game" or "Undo Last Move"';
+  } else {
+    hint.textContent = `Draw ${state.currentPlayer === 'X' ? 'an X' : 'an O'} in any empty cell`;
+  }
+}
+
+function updateScoreDisplay() {
+  document.getElementById('scoreX').textContent = state.scores.X;
+  document.getElementById('scoreO').textContent = state.scores.O;
+  document.getElementById('scoreD').textContent = state.scores.D;
+}
+
+function updateUndoButton() {
+  document.getElementById('undoBtn').disabled = state.moveHistory.length === 0;
+}
+
+document.getElementById('newGameBtn').addEventListener('click', newGame);
+
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playSound(symbol) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    const freq = symbol === 'X' ? 520 : 440;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq * 1.5, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+  } catch (e) {}
+}
+
+function playWinSound() {
+  try {
+    const ctx = getAudioCtx();
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      const t = ctx.currentTime + i * 0.12;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    });
+  } catch (e) {}
+}
+
+const confettiCanvas = document.getElementById('confettiCanvas');
+const confettiCtx = confettiCanvas.getContext('2d');
+let confettiParticles = [];
+let confettiFrame = null;
+const CONFETTI_COLORS = ['#4CAF7D','#E05A5A','#4A90D9','#F5C542','#B86EF5','#FF9F4A'];
+
+function resizeConfetti() {
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+}
+resizeConfetti();
+window.addEventListener('resize', resizeConfetti);
+
+function launchConfetti() {
+  playWinSound();
+  confettiParticles = [];
+
+  for (let i = 0; i < 120; i++) {
+    confettiParticles.push({
+      x: Math.random() * confettiCanvas.width,
+      y: -10 - Math.random() * 100,
+      vx: (Math.random() - 0.5) * 4,
+      vy: 2 + Math.random() * 4,
+      rot: Math.random() * Math.PI * 2,
+      rotV: (Math.random() - 0.5) * 0.2,
+      w: 8 + Math.random() * 10,
+      h: 4 + Math.random() * 6,
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      opacity: 1
+    });
+  }
+
+  if (confettiFrame) cancelAnimationFrame(confettiFrame);
+  animateConfetti();
+}
+
+function animateConfetti() {
+  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+  confettiParticles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.rot += p.rotV;
+    if (p.y > confettiCanvas.height * 0.7) p.opacity -= 0.02;
+
+    confettiCtx.save();
+    confettiCtx.translate(p.x, p.y);
+    confettiCtx.rotate(p.rot);
+    confettiCtx.globalAlpha = Math.max(0, p.opacity);
+    confettiCtx.fillStyle = p.color;
+    confettiCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    confettiCtx.restore();
+  });
+
+  confettiParticles = confettiParticles.filter(p => p.opacity > 0);
+
+  if (confettiParticles.length > 0) {
+    confettiFrame = requestAnimationFrame(animateConfetti);
+  }
+}
+
+function stopConfetti() {
+  if (confettiFrame) {
+    cancelAnimationFrame(confettiFrame);
+    confettiFrame = null;
+  }
+  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+}
+
+setStatus("Player X's turn — Draw!", 'X');
+updateUndoButton();
+</script>
+</body>
+</html>
