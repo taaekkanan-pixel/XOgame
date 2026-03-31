@@ -5,7 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>XO Draw — Tic-Tac-Toe</title>
-<style>
+<style> @media (orientation: landscape) {
+  body {
+    justify-content: flex-start;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .game-wrapper {
+    gap: 10px;
+  }
+
+  .title {
+    font-size: clamp(26px, 4vw, 42px);
+  }
+
+  .status-bar {
+    padding: 8px 18px;
+    min-width: min(70vw, 320px);
+  }
+
+  .starter-row,
+  .score-row,
+  .btn-row,
+  .top-action-row {
+    transform: scale(0.95);
+    transform-origin: center;
+  }
+}
+
   @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Caveat:wght@600;700&display=swap');
 
   :root {
@@ -23,7 +51,7 @@
     --text: #2D3A32;
     --text-light: #7A9A85;
     --shadow: rgba(76, 175, 125, 0.15);
-    --cell-size: min(26vw, 200px);
+    --cell-size: min(26vw, 26vh, 180px);
     --gap: min(2vw, 14px);
     --radius: 20px;
   }
@@ -36,7 +64,8 @@
     background: var(--bg);
     font-family: 'Nunito', sans-serif;
     color: var(--text);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     touch-action: none;
   }
 
@@ -44,11 +73,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: clamp(10px, 2.5vh, 22px);
-    padding: 16px;
+    justify-content: flex-start;
+    gap: clamp(8px, 1.8vh, 18px);
+    padding: max(10px, env(safe-area-inset-top)) 16px max(10px, env(safe-area-inset-bottom));
     min-height: 100dvh;
-  }
+}
 
   .blob {
     position: fixed;
@@ -67,9 +96,12 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(10px, 2.5vh, 22px);
+    justify-content: flex-start;
+    gap: clamp(8px, 1.8vh, 18px);
     width: 100%;
-  }
+    min-height: 100dvh;
+    max-width: 1024px;
+}
 
   .header {
     text-align: center;
